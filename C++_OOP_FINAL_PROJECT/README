@@ -1,1 +1,182 @@
+Task Description:
+*This project focuses on analyzing student grades by implementing dynamic arrays and using object-oriented programming techniques. The objective is to:
 
+*Create a Student struct containing a name, a dynamic array of grades, and the number of grades.
+
+*Implement an abstract class GradeMetric with a pure virtual function compute.
+
+*Derive two classes from GradeMetric: MedianMetric and ModeMetric.
+
+*Demonstrate inheritance and polymorphism by using a GradeMetric** array to call derived class functions.
+
+*Use pointer arithmetic to access grades for calculations.
+
+*Create utility functions addGrade and removeGrade that dynamically resize the grade array.
+
+How It Was Completed:
+
+*The Student struct is designed to store a name and a dynamic list of grades.
+
+*A pure virtual class GradeMetric defines a contract (compute) for grade analysis.
+
+*Two subclasses, MedianMetric and ModeMetric, override the compute method to calculate the median and mode, respectively.
+
+*A dynamic array of pointers (GradeMetric**) is used to hold metric objects and invoke their functionality polymorphically.
+
+*Grade data is accessed and manipulated using pointer arithmetic (*(grades + i)).
+
+*Functions addGrade and removeGrade allocate new arrays with updated sizes and copy existing data accordingly.
+
+*The program demonstrates all functionality in main() using a student named "John Doe" with sample grades.
+
+
+
+
+#include <iostream>     // Includes the standard input-output stream library
+#include <algorithm>    // Includes functions like sort()
+#include <cstring>      // Includes functions like strcpy()
+using namespace std;    // Allows use of standard library without std:: prefix
+
+// Define the Student structure
+struct Student {
+    char name[30];      // Array to store the student's name (max 29 characters + null terminator)
+    int* grades;        // Pointer to dynamically allocated array of grades
+    int nGrades;        // Number of grades currently stored
+};
+
+// Abstract base class for grade metrics
+class GradeMetric {
+public:
+    virtual float compute(const Student* student) = 0; // Pure virtual function to compute metric
+    virtual ~GradeMetric() {}  // Virtual destructor to allow proper cleanup of derived classes
+};
+
+// Derived class for computing median of grades
+class MedianMetric : public GradeMetric {
+public:
+    float compute(const Student* student) override {      // Override base compute function
+        int n = student->nGrades;                         // Store number of grades
+        if (n == 0) return 0;                             // If no grades, return 0
+
+        int* temp = new int[n];                           // Allocate new array to sort grades
+        for (int i = 0; i < n; ++i)
+            *(temp + i) = *(student->grades + i);         // Copy grades to temporary array
+
+        sort(temp, temp + n);                             // Sort the temporary array
+
+        float median;
+        if (n % 2 == 0)                                   // If even number of grades
+            median = (*(temp + n / 2 - 1) + *(temp + n / 2)) / 2.0f; // Average of two middle values
+        else
+            median = *(temp + n / 2);                     // If odd, take middle value
+
+        delete[] temp;                                    // Free temporary array
+        return median;                                    // Return the computed median
+    }
+};
+
+// Derived class for computing mode of grades
+class ModeMetric : public GradeMetric {
+public:
+    float compute(const Student* student) override {      // Override compute function
+        int n = student->nGrades;                         // Store number of grades
+        if (n == 0) return 0;                             // If no grades, return 0
+
+        int mode = *(student->grades);                    // Start by assuming first grade is mode
+        int maxCount = 0;                                 // Track highest count of any grade
+
+        for (int i = 0; i < n; ++i) {                     // Outer loop to test each grade
+            int count = 0;                                // Reset count for current grade
+            for (int j = 0; j < n; ++j) {                 // Inner loop to count occurrences
+                if (*(student->grades + j) == *(student->grades + i))
+                    count++;
+            }
+            if (count > maxCount) {                       // If current grade appears more times
+                maxCount = count;                         // Update maxCount
+                mode = *(student->grades + i);            // Update mode
+            }
+        }
+        return mode;                                      // Return the most frequent grade
+    }
+};
+
+// Function to add a grade to a student
+void addGrade(Student& student, int newGrade) {
+    int* newArray = new int[student.nGrades + 1];         // Allocate new array with 1 extra space
+    for (int i = 0; i < student.nGrades; ++i) {
+        *(newArray + i) = *(student.grades + i);          // Copy old grades to new array
+    }
+    *(newArray + student.nGrades) = newGrade;             // Add the new grade at the end
+
+    delete[] student.grades;                              // Free old grades array
+    student.grades = newArray;                            // Update pointer to new array
+    student.nGrades++;                                    // Increment the number of grades
+}
+
+// Function to remove a grade at a specific index
+void removeGrade(Student& student, int index) {
+    if (index < 0 || index >= student.nGrades) return;    // Check for invalid index
+
+    int* newArray = new int[student.nGrades - 1];         // Allocate smaller array
+    for (int i = 0, j = 0; i < student.nGrades; ++i) {    // Copy grades, skipping the one to remove
+        if (i != index)
+            *(newArray + j++) = *(student.grades + i);
+    }
+
+    delete[] student.grades;                              // Free old grades array
+    student.grades = newArray;                            // Point to the new array
+    student.nGrades--;                                    // Decrease grade count
+}
+
+// Main function to demonstrate the program
+int main() {
+    Student s;                                            // Declare a Student variable
+    strcpy(s.name, "John Doe");                           // Assign a name using strcpy
+    s.grades = nullptr;                                   // Initialize grades pointer to null
+    s.nGrades = 0;                                        // Initialize number of grades to 0
+
+    // Add some grades to the student
+    addGrade(s, 85);
+    addGrade(s, 92);
+    addGrade(s, 78);
+    addGrade(s, 92);
+    addGrade(s, 88);
+
+    // Create an array of pointers to GradeMetric objects
+    GradeMetric** metrics = new GradeMetric*[2];          // Allocate memory for 2 metric objects
+    metrics[0] = new MedianMetric();                      // First is MedianMetric
+    metrics[1] = new ModeMetric();                        // Second is ModeMetric
+
+    // Display student name and grades
+    cout << "Student: " << s.name << endl;
+    cout << "Grades: ";
+    for (int i = 0; i < s.nGrades; ++i) {
+        cout << *(s.grades + i) << " ";                   // Print each grade
+    }
+    cout << endl;
+
+    // Compute and display metrics
+    cout << "Median: " << metrics[0]->compute(&s) << endl;
+    cout << "Mode: " << metrics[1]->compute(&s) << endl;
+
+    // Remove a grade at index 2 (third grade)
+    removeGrade(s, 2);
+    cout << "\nAfter removing grade at index 2:" << endl;
+    cout << "Grades: ";
+    for (int i = 0; i < s.nGrades; ++i) {
+        cout << *(s.grades + i) << " ";                   // Print remaining grades
+    }
+    cout << endl;
+
+    // Recompute and display updated metrics
+    cout << "New Median: " << metrics[0]->compute(&s) << endl;
+    cout << "New Mode: " << metrics[1]->compute(&s) << endl;
+
+    // Cleanup: Free dynamically allocated memory
+    delete metrics[0];                                    // Delete MedianMetric object
+    delete metrics[1];                                    // Delete ModeMetric object
+    delete[] metrics;                                     // Delete array of metric pointers
+    delete[] s.grades;                                    // Delete grades array
+
+    return 0;                                              // End of program
+}
